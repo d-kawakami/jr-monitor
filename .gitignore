@@ -1,1 +1,29 @@
+# 環境変数・シークレット
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# 仮想環境
+.venv/
+venv/
+env/
+
+# テスト・カバレッジ
+.coverage
+htmlcov/
+.pytest_cache/
+
+# ランタイム生成ファイル
+*.log
+state.json
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+*~
