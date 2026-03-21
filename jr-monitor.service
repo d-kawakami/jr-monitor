@@ -1,0 +1,28 @@
+[Unit]
+Description=JR運行障害 LINE通知モニター
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/jr-monitor
+ExecStart=/opt/jr-monitor/venv/bin/python /opt/jr-monitor/monitor.py
+Restart=on-failure
+RestartSec=30s
+
+# 環境変数ファイルからシークレットを読み込む（/etc/jr-monitor.env を作成すること）
+EnvironmentFile=/etc/jr-monitor.env
+
+# セキュリティ強化
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/log /var/lib/jr-monitor
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jr-monitor
+
+[Install]
+WantedBy=multi-user.target
