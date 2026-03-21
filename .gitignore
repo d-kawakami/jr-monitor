@@ -27,3 +27,4 @@ state.json
 .idea/
 *.swp
 *~
+.claude/
