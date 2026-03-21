@@ -1,7 +1,7 @@
 # JR運行障害 LINE通知モニタリングシステム
 
 JR（東日本・西日本）の運行障害・遅延・運休情報をYahoo!路線情報から定期監視し、
-異常検知時にLINE Messaging APIで即時プッシュ通知するシステムです。
+異常検知時（運行障害・運休等）にLINE Messaging APIで即時プッシュ通知するシステムです。
 
 ![タイトルなし](https://github.com/user-attachments/assets/d94461d0-2597-499c-8578-512351c83d93)
 
