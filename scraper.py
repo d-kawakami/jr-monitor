@@ -25,7 +25,7 @@ HEADERS: dict[str, str] = {
 BASE_URL = "https://transit.yahoo.co.jp/traininfo/area/{area_code}/"
 
 
-def fetch_disruptions(area_code: str) -> dict[str, dict]:
+def fetch_disruptions(area_code: str) -> dict[str, dict] | None:
     """
     Yahoo!路線情報から運行障害情報を取得する
 
@@ -33,8 +33,8 @@ def fetch_disruptions(area_code: str) -> dict[str, dict]:
         area_code: エリアコード（関東=4, 東海=5, 関西=6）
 
     Returns:
-        路線名をキー、{"state": str, "detail": str} を値とする辞書
-        取得失敗時は空辞書を返す
+        路線名をキー、{"state": str, "detail": str} を値とする辞書。
+        障害なしの場合は空辞書。取得失敗時は None を返す
     """
     url = BASE_URL.format(area_code=area_code)
     try:
@@ -42,15 +42,15 @@ def fetch_disruptions(area_code: str) -> dict[str, dict]:
         response.raise_for_status()
     except requests.exceptions.Timeout:
         logger.warning("Yahoo!路線情報へのリクエストがタイムアウトしました: %s", url)
-        return {}
+        return None
     except requests.exceptions.RequestException as e:
         logger.warning("Yahoo!路線情報の取得に失敗しました: %s", e)
-        return {}
+        return None
 
     return _parse_disruptions(response.text)
 
 
-def _parse_disruptions(html: str) -> dict[str, dict]:
+def _parse_disruptions(html: str) -> dict[str, dict] | None:
     """
     取得したHTMLをパースして全路線の運行状態を抽出する
 
@@ -59,7 +59,8 @@ def _parse_disruptions(html: str) -> dict[str, dict]:
 
     Returns:
         路線名をキー、{"state": str, "detail": str} を値とする辞書
-        障害・遅延がある路線のみ含む（平常運転は除外）
+        障害・遅延がある路線のみ含む（平常運転は除外）。
+        パース失敗時は None を返す
     """
     result: dict[str, dict] = {}
 
@@ -79,6 +80,7 @@ def _parse_disruptions(html: str) -> dict[str, dict]:
 
     except Exception as e:
         logger.warning("HTMLのパースに失敗しました: %s", e)
+        return None
 
     return result
 

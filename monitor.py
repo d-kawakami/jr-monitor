@@ -139,28 +139,31 @@ def run(dry_run: bool = False) -> None:
             logger.info("運行情報を取得中 (エリアコード: %s)...", config.AREA_CODE)
             current = scraper.fetch_disruptions(config.AREA_CODE)
 
-            new_or_changed, recovered = state.diff(prev, current, config.TARGET_LINES)
+            if current is None:
+                logger.warning("運行情報の取得に失敗したため、今回のサイクルをスキップします")
+            else:
+                new_or_changed, recovered = state.diff(prev, current, config.TARGET_LINES)
 
-            # 障害・変化通知
-            for info in new_or_changed:
-                msg = build_disruption_message(info)
-                logger.info("障害検知: %s - %s", info["line"], info["state"])
-                notify(config.LINE_CHANNEL_TOKEN, config.LINE_USER_ID, msg, dry_run)
+                # 障害・変化通知
+                for info in new_or_changed:
+                    msg = build_disruption_message(info)
+                    logger.info("障害検知: %s - %s", info["line"], info["state"])
+                    notify(config.LINE_CHANNEL_TOKEN, config.LINE_USER_ID, msg, dry_run)
 
-            # 復旧通知
-            for line in recovered:
-                msg = build_recovery_message(line)
-                logger.info("復旧検知: %s", line)
-                notify(config.LINE_CHANNEL_TOKEN, config.LINE_USER_ID, msg, dry_run)
+                # 復旧通知
+                for line in recovered:
+                    msg = build_recovery_message(line)
+                    logger.info("復旧検知: %s", line)
+                    notify(config.LINE_CHANNEL_TOKEN, config.LINE_USER_ID, msg, dry_run)
 
-            if not new_or_changed and not recovered:
-                logger.info(
-                    "変化なし (監視中の障害: %d路線)",
-                    sum(1 for t in config.TARGET_LINES if t in current),
-                )
+                if not new_or_changed and not recovered:
+                    logger.info(
+                        "変化なし (監視中の障害: %d路線)",
+                        sum(1 for t in config.TARGET_LINES if t in current),
+                    )
 
-            state.save(state_path, current)
-            prev = current
+                state.save(state_path, current)
+                prev = current
 
         except Exception as e:
             # 予期しない例外でもプロセスを継続させる

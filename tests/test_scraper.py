@@ -70,8 +70,8 @@ class TestFetchDisruptions:
 
         assert result == {}
 
-    def test_タイムアウト時は空辞書を返しWarningログを出す(self, caplog):
-        """タイムアウト発生時に空辞書を返してWarningを記録すること"""
+    def test_タイムアウト時はNoneを返しWarningログを出す(self, caplog):
+        """タイムアウト発生時に None を返してWarningを記録すること"""
         with patch(
             "scraper.requests.get",
             side_effect=requests.exceptions.Timeout("タイムアウト"),
@@ -80,11 +80,11 @@ class TestFetchDisruptions:
             with caplog.at_level(logging.WARNING, logger="scraper"):
                 result = scraper.fetch_disruptions("4")
 
-        assert result == {}
+        assert result is None
         assert any("タイムアウト" in r.message for r in caplog.records)
 
-    def test_接続エラー時は空辞書を返しWarningログを出す(self, caplog):
-        """接続エラー発生時に空辞書を返してWarningを記録すること"""
+    def test_接続エラー時はNoneを返しWarningログを出す(self, caplog):
+        """接続エラー発生時に None を返してWarningを記録すること"""
         with patch(
             "scraper.requests.get",
             side_effect=requests.exceptions.ConnectionError("接続失敗"),
@@ -93,18 +93,18 @@ class TestFetchDisruptions:
             with caplog.at_level(logging.WARNING, logger="scraper"):
                 result = scraper.fetch_disruptions("4")
 
-        assert result == {}
+        assert result is None
         assert any(r.levelname == "WARNING" for r in caplog.records)
 
-    def test_HTTPエラー時は空辞書を返す(self):
-        """HTTPステータスエラー時に空辞書を返すこと"""
+    def test_HTTPエラー時はNoneを返す(self):
+        """HTTPステータスエラー時に None を返すこと"""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("503")
 
         with patch("scraper.requests.get", return_value=mock_response):
             result = scraper.fetch_disruptions("4")
 
-        assert result == {}
+        assert result is None
 
     def test_正常運転の路線は結果に含まれない(self):
         """「平常運転」状態の路線は結果辞書に含まれないこと"""
