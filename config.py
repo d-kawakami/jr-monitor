@@ -25,6 +25,13 @@ TARGET_LINES: list[str] = [
 #    "総武線(快速)[東京～千葉]",
 ]
 
+# 監視時間帯（HH:MM 形式のタプルのリスト）
+# この時間帯のみ運行情報を取得・通知する
+MONITORING_WINDOWS: list[tuple[str, str]] = [
+    ("05:30", "08:30"),
+    ("14:30", "20:30"),
+]
+
 # 監視インターバル（秒）
 CHECK_INTERVAL: int = 60
 

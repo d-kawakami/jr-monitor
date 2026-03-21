@@ -4,6 +4,7 @@ JR運行障害 LINE通知モニター
 """
 
 import argparse
+import datetime
 import logging
 import logging.handlers
 import signal
@@ -55,6 +56,22 @@ def setup_logging(log_file: str, dry_run: bool = False) -> None:
             root.addHandler(file_handler)
         except OSError as e:
             logger.warning("ログファイルを開けません (%s): %s。コンソール出力のみ継続。", log_file, e)
+
+
+def is_monitoring_time() -> bool:
+    """
+    現在時刻が設定された監視時間帯内かどうかを返す
+
+    Returns:
+        監視時間帯内であればTrue
+    """
+    now = datetime.datetime.now().time()
+    for start_str, end_str in config.MONITORING_WINDOWS:
+        h_s, m_s = map(int, start_str.split(":"))
+        h_e, m_e = map(int, end_str.split(":"))
+        if datetime.time(h_s, m_s) <= now <= datetime.time(h_e, m_e):
+            return True
+    return False
 
 
 def build_disruption_message(info: dict) -> str:
@@ -136,6 +153,18 @@ def run(dry_run: bool = False) -> None:
 
     while not shutdown_requested:
         try:
+            if not is_monitoring_time():
+                windows = ", ".join(f"{s}〜{e}" for s, e in config.MONITORING_WINDOWS)
+                logger.debug("監視時間帯外のためスキップ (監視時間: %s)", windows)
+                # シャットダウン要求があれば即終了
+                if shutdown_requested:
+                    break
+                for _ in range(config.CHECK_INTERVAL):
+                    if shutdown_requested:
+                        break
+                    time.sleep(1)
+                continue
+
             logger.info("運行情報を取得中 (エリアコード: %s)...", config.AREA_CODE)
             current = scraper.fetch_disruptions(config.AREA_CODE)
 
