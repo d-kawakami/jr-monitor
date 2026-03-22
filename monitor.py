@@ -142,12 +142,13 @@ def run(dry_run: bool = False) -> None:
     signal.signal(signal.SIGTERM, _handle_signal)
 
     logger.info("JR運行障害モニター起動 (dry_run=%s)", dry_run)
-    notify(
-        config.LINE_CHANNEL_TOKEN,
-        config.LINE_USER_ID,
-        "🚆 JR運行障害モニターを起動しました。監視を開始します。",
-        dry_run,
-    )
+    if is_monitoring_time():
+        notify(
+            config.LINE_CHANNEL_TOKEN,
+            config.LINE_USER_ID,
+            "🚆 JR運行障害モニターを起動しました。監視を開始します。",
+            dry_run,
+        )
 
     prev = state.load(state_path)
 
@@ -211,12 +212,13 @@ def run(dry_run: bool = False) -> None:
 
     # 終了通知
     logger.info("監視終了")
-    notify(
-        config.LINE_CHANNEL_TOKEN,
-        config.LINE_USER_ID,
-        "🛑 JR運行障害モニターを停止しました。",
-        dry_run,
-    )
+    if is_monitoring_time():
+        notify(
+            config.LINE_CHANNEL_TOKEN,
+            config.LINE_USER_ID,
+            "🛑 JR運行障害モニターを停止しました。",
+            dry_run,
+        )
 
 
 def main() -> None:
