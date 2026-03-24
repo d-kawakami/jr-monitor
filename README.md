@@ -3,6 +3,7 @@
 JR（東日本・西日本）の運行障害・遅延・運休情報をYahoo!路線情報から定期監視し、
 異常検知時（運行障害・運休等）にLINE Messaging APIで即時プッシュ通知するシステムです。
 Rasberry Pi 5上で運用する場合の例を示しています。
+LINE公式アカウントを先に作成しないとDevelopers Consoleが開けません。アカウント設定とキー取得に一時間、システム構築にclaude codeで一時間程度かかりました。
 
 <br>
 <img src=doc/images/sample1.jpg width="300">
