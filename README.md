@@ -33,7 +33,7 @@ jr-monitor/
 ## セットアップ
 
 ### 1. LINE Developers 設定
-
+0. LINE公式アカウント作成
 1. [LINE Developers Console](https://developers.line.biz/) にログイン
 2. プロバイダーを作成 → 「Messaging API」チャネルを作成
 3. **Channel Access Token**（長期トークン）を発行して控える
