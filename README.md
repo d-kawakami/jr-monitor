@@ -5,7 +5,7 @@ JR（東日本・西日本）の運行障害・遅延・運休情報をYahoo!路
 Rasberry Pi 5上で運用する場合の例を示しています。
 
 <br>
-<img src=https://github.com/user-attachments/assets/d94461d0-2597-499c-8578-512351c83d93 width="300">
+<img src=doc/images/sample1.jpg width="300">
 
 ---
 
