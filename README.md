@@ -1,27 +1,28 @@
-# JR運行障害 LINE通知モニタリングシステム
+# JR Train Disruption LINE Notification Monitoring System
 
-JR（東日本・西日本）の運行障害・遅延・運休情報をYahoo!路線情報から定期監視し、
-異常検知時（運行障害・運休等）にLINE Messaging APIで即時プッシュ通知するシステムです。
-Rasberry Pi 5上で運用する場合の例を示しています。
-LINE公式アカウントを先に作成しないとDevelopers Consoleが開けません。
+[日本語版はこちら](README_ja.md)
+
+This system periodically monitors JR (East Japan / West Japan) train disruptions, delays, and cancellations via Yahoo! Transit Info, and sends instant push notifications through the LINE Messaging API when an anomaly (disruption, cancellation, etc.) is detected.
+The instructions below use Raspberry Pi 5 as a deployment example.
+Note: You must create a LINE Official Account before you can access the LINE Developers Console.
 
 <br>
 <img src=doc/images/sample1.jpg width="300">
 
 ---
 
-## 構成
+## Project Structure
 
 ```
 jr-monitor/
-├── config.py              # 設定（トークン・路線名・インターバル）
-├── monitor.py             # メインループ
-├── line_client.py         # LINE Messaging API ラッパー
-├── scraper.py             # Yahoo!路線情報スクレイパー
-├── state.py               # 状態管理（JSON永続化）
-├── requirements.txt       # 依存ライブラリ
-├── jr-monitor.service     # systemd ユニットファイル
-├── .env.example           # 環境変数テンプレート
+├── config.py              # Configuration (tokens, line names, interval)
+├── monitor.py             # Main loop
+├── line_client.py         # LINE Messaging API wrapper
+├── scraper.py             # Yahoo! Transit Info scraper
+├── state.py               # State management (JSON persistence)
+├── requirements.txt       # Dependencies
+├── jr-monitor.service     # systemd unit file
+├── .env.example           # Environment variable template
 └── tests/
     ├── test_scraper.py
     ├── test_line.py
@@ -30,41 +31,42 @@ jr-monitor/
 
 ---
 
-## セットアップ
+## Setup
 
-### 1. LINE Developers 設定
-0. LINE公式アカウント作成
-1. [LINE Developers Console](https://developers.line.biz/) にログイン
-2. プロバイダーを作成 → 「Messaging API」チャネルを作成
-3. **Channel Access Token**（長期トークン）を発行して控える
-4. LINE公式アカウントを自分のLINEで友達追加する
-5. チャネルの「Webhook設定」から **Your User ID** を確認する（`U` で始まる文字列）
+### 1. LINE Developers Configuration
 
-### 2. 依存ライブラリのインストール
+0. Create a LINE Official Account
+1. Log in to [LINE Developers Console](https://developers.line.biz/)
+2. Create a Provider → Create a "Messaging API" channel
+3. Issue a **Channel Access Token** (long-lived token) and save it
+4. Add your LINE Official Account as a friend in your LINE app
+5. Find your **Your User ID** in the channel's "Webhook settings" (a string starting with `U`)
+
+### 2. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. 環境変数の設定
+### 3. Configure Environment Variables
 
 ```bash
 cp .env.example .env
-# .env を編集してトークンとユーザーIDを入力する
+# Edit .env and fill in your token and user ID
 ```
 
-**ローカル実行時:**
+**For local execution:**
 ```bash
 export LINE_CHANNEL_TOKEN="your_token"
 export LINE_USER_ID="U..."
-# または
-source .env   # dotenv 形式の場合は python-dotenv を利用
+# or
+source .env   # use python-dotenv for dotenv-format files
 ```
 
-### 4. 監視路線の設定
+### 4. Configure Target Train Lines
 
-`config.py` の `TARGET_LINES` を編集して監視したい路線名を設定します。
-路線名はYahoo!路線情報に表示される名称と完全一致する必要があります（`JR` プレフィックス不要）。不要な路線はコメントアウトしてください。
+Edit `TARGET_LINES` in `config.py` to set the train lines you want to monitor.
+Line names must exactly match the names shown on Yahoo! Transit Info (no `JR` prefix required). Comment out lines you don't need.
 
 ```python
 TARGET_LINES: list[str] = [
@@ -81,36 +83,36 @@ TARGET_LINES: list[str] = [
 ]
 ```
 
-### 5. 監視時間帯の設定
+### 5. Configure Monitoring Hours
 
-`config.py` の `MONITORING_WINDOWS` を編集して、通知を行う時間帯を指定します。
-リスト内に複数の `(開始時刻, 終了時刻)` タプルを `"HH:MM"` 形式で記述します。
-指定した時間帯以外はスクレイピング・通知ともに行いません。
+Edit `MONITORING_WINDOWS` in `config.py` to specify the time windows during which notifications are sent.
+List one or more `(start_time, end_time)` tuples in `"HH:MM"` format.
+Outside of the specified windows, neither scraping nor notifications will occur.
 
 ```python
 MONITORING_WINDOWS: list[tuple[str, str]] = [
-    ("05:30", "08:30"),   # 朝の通勤時間帯
-    ("14:30", "20:30"),   # 夕方〜夜の帰宅時間帯
+    ("05:30", "08:30"),   # Morning commute hours
+    ("14:30", "20:30"),   # Evening / night commute hours
 ]
 ```
 
-### 6. 監視インターバルの設定
+### 6. Configure Check Interval
 
-`config.py` の `CHECK_INTERVAL` でチェック間隔を秒単位で指定します（デフォルト: 60秒）。
+Set the check interval in seconds via `CHECK_INTERVAL` in `config.py` (default: 60 seconds).
 
 ```python
-CHECK_INTERVAL: int = 60  # 60秒ごとに運行情報を取得
+CHECK_INTERVAL: int = 60  # Fetch train status every 60 seconds
 ```
 
 ---
 
-## テスト実行
+## Running Tests
 
 ```bash
 pytest tests/ -v
 ```
 
-カバレッジレポート付きで実行:
+With coverage report:
 
 ```bash
 pytest tests/ -v --cov=. --cov-report=term-missing
@@ -118,20 +120,20 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 
 ---
 
-## 動作確認（dry-run）
+## Dry Run (Smoke Test)
 
-LINE送信を行わずログ出力のみで動作確認できます:
+You can verify the system works without actually sending LINE messages by using dry-run mode:
 
 ```bash
 python monitor.py --dry-run
 ```
 
-正常起動後、`CHECK_INTERVAL` で設定した間隔（デフォルト60秒）ごとにチェックログが出力されます。
-`Ctrl+C` で停止できます。
+After successful startup, check logs are printed at the interval set by `CHECK_INTERVAL` (default: 60 seconds).
+Press `Ctrl+C` to stop.
 
 ---
 
-## 本番実行
+## Production Run
 
 ```bash
 python monitor.py
@@ -139,28 +141,28 @@ python monitor.py
 
 ---
 
-## Raspberry Pi へのデプロイ手順
+## Deploying to Raspberry Pi
 
-### 前提条件
+### Prerequisites
 
-- Raspberry Pi OS (Bullseye 以降) / Python 3.10+
-- インターネット接続
-- systemd が利用可能
+- Raspberry Pi OS (Bullseye or later) / Python 3.10+
+- Internet connection
+- systemd available
 
-### 手順
+### Steps
 
-#### 1. ファイルの配置
+#### 1. Copy Files to Raspberry Pi
 
 ```bash
-# Raspberry Pi 上で実行
+# Run on Raspberry Pi
 sudo mkdir -p /opt/jr-monitor /var/lib/jr-monitor
 sudo chown pi:pi /opt/jr-monitor /var/lib/jr-monitor
 
-# ローカルからファイルをコピー（例: scp / rsync）
+# Copy files from local machine (e.g., via scp / rsync)
 rsync -av jr-monitor/ pi@raspberrypi.local:/opt/jr-monitor/
 ```
 
-#### 2. Python 仮想環境の作成と依存インストール
+#### 2. Create Python Virtual Environment and Install Dependencies
 
 ```bash
 cd /opt/jr-monitor
@@ -169,13 +171,13 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-#### 3. 環境変数ファイルの作成
+#### 3. Create Environment Variable File
 
 ```bash
 sudo nano /etc/jr-monitor.env
 ```
 
-内容:
+Contents:
 ```
 LINE_CHANNEL_TOKEN=your_channel_access_token
 LINE_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -185,14 +187,14 @@ LINE_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 sudo chmod 600 /etc/jr-monitor.env
 ```
 
-#### 4. ログディレクトリの作成
+#### 4. Create Log Directory
 
 ```bash
 sudo mkdir -p /var/log
-# config.py の LOG_FILE パスを /home/pi/jr-monitor.log などに変更することも可
+# You can also change LOG_FILE in config.py to a path like /home/pi/jr-monitor.log
 ```
 
-#### 5. systemd サービスのインストール
+#### 5. Install systemd Service
 
 ```bash
 sudo cp /opt/jr-monitor/jr-monitor.service /etc/systemd/system/
@@ -201,64 +203,64 @@ sudo systemctl enable jr-monitor
 sudo systemctl start jr-monitor
 ```
 
-#### 6. 動作確認
+#### 6. Verify Operation
 
 ```bash
-# ステータス確認
+# Check status
 sudo systemctl status jr-monitor
 
-# リアルタイムログ確認
+# Follow logs in real time
 sudo journalctl -u jr-monitor -f
 
-# 停止
+# Stop service
 sudo systemctl stop jr-monitor
 
-# 無効化
+# Disable service
 sudo systemctl disable jr-monitor
 ```
 
-#### 7. 自動再起動の設定（オプション）
+#### 7. Configure Auto-Restart (Optional)
 
-`jr-monitor.service` の `[Service]` セクションに以下が含まれていることを確認:
+Verify the following is included in the `[Service]` section of `jr-monitor.service`:
 
 ```ini
 Restart=on-failure
 RestartSec=30s
 ```
 
-これにより、クラッシュ時に30秒後に自動再起動されます。
+This causes the service to automatically restart 30 seconds after a crash.
 
 ---
 
-## ログの確認
+## Checking Logs
 
 ```bash
-# systemd ジャーナル
+# systemd journal
 sudo journalctl -u jr-monitor -n 100
 
-# ログファイル直接確認
+# Read log file directly
 tail -f /var/log/jr-monitor.log
 ```
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-| 症状 | 原因 | 対処 |
-|------|------|------|
-| LINEが届かない | トークン・ユーザーIDが間違い | `--dry-run` で動作確認後、LINE API ダッシュボードを確認 |
-| 障害が検知されない | 路線名の不一致 | Yahoo!路線情報の実際の表示名と `TARGET_LINES` を照合 |
-| `ModuleNotFoundError` | 仮想環境が有効でない | `source venv/bin/activate` で有効化 |
-| PermissionError | ログ/状態ファイルへの書き込み権限なし | `config.py` のパスを書き込み可能な場所に変更 |
+| Symptom | Cause | Solution |
+|---------|-------|----------|
+| No LINE message received | Incorrect token or user ID | Verify with `--dry-run`, then check the LINE API dashboard |
+| Disruptions not detected | Train line name mismatch | Compare actual display names on Yahoo! Transit Info with `TARGET_LINES` |
+| `ModuleNotFoundError` | Virtual environment not activated | Run `source venv/bin/activate` |
+| `PermissionError` | No write permission for log/state files | Change the paths in `config.py` to a writable location |
 
 ---
 
-## エリアコードの変更（関西・東海）
+## Changing the Area Code (Kansai / Tokai)
 
-`config.py` の `AREA_CODE` を変更することで関西・東海も監視できます:
+You can monitor Kansai (Osaka area) and Tokai (Nagoya area) regions by changing `AREA_CODE` in `config.py`:
 
-| 地域 | AREA_CODE |
-|------|-----------|
-| 関東 | `"4"` |
-| 東海 | `"5"` |
-| 関西 | `"6"` |
+| Region | AREA_CODE |
+|--------|-----------|
+| Kanto (Tokyo area) | `"4"` |
+| Tokai (Nagoya area) | `"5"` |
+| Kansai (Osaka area) | `"6"` |
