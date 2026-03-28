@@ -426,7 +426,7 @@
   // ─── Status ──────────────────────────────────────────────────
   async function refreshStatus() {
     try {
-      const r = await fetch('/api/status');
+      const r = await fetch('/jr-monitor/api/status');
       const d = await r.json();
       const dot = document.getElementById('statusDot');
       const txt = document.getElementById('statusText');
@@ -459,7 +459,7 @@
     const dryRun = document.getElementById('dryRunCheck').checked;
     document.getElementById('btnStart').disabled = true;
     try {
-      const r = await fetch('/api/start', {
+      const r = await fetch('/jr-monitor/api/start', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({dry_run: dryRun})
@@ -479,7 +479,7 @@
   async function stopMonitor() {
     document.getElementById('btnStop').disabled = true;
     try {
-      const r = await fetch('/api/stop', {method: 'POST'});
+      const r = await fetch('/jr-monitor/api/stop', {method: 'POST'});
       const d = await r.json();
       if (d.ok) {
         showToast('🛑 モニターを停止しました');
@@ -599,7 +599,7 @@
   // ─── Save schedule ────────────────────────────────────────────
   async function saveSchedule() {
     try {
-      const r = await fetch('/api/schedule', {
+      const r = await fetch('/jr-monitor/api/schedule', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(scheduleData)
@@ -621,7 +621,7 @@
     if (!scheduleData) return;
     scheduleData.notify_on_start_stop = checked;
     try {
-      const r = await fetch('/api/schedule', {
+      const r = await fetch('/jr-monitor/api/schedule', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(scheduleData)
@@ -641,7 +641,7 @@
   async function init() {
     await refreshStatus();
     try {
-      const r = await fetch('/api/schedule');
+      const r = await fetch('/jr-monitor/api/schedule');
       const d = await r.json();
       renderDays(d);
       const notifyCheck = document.getElementById('notifyStartStopCheck');

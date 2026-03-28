@@ -11,13 +11,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request
+from flask import Blueprint, Flask, jsonify, render_template, request
 
 import schedule_manager
 
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+bp = Blueprint("jr_monitor", __name__, url_prefix="/jr-monitor")
 
 BASE_DIR = Path(__file__).parent
 PID_FILE = BASE_DIR / "monitor.pid"
@@ -108,18 +109,18 @@ def stop_process() -> dict:
 
 # ── API エンドポイント ────────────────────────────────────────
 
-@app.route("/")
+@bp.route("/")
 def index():
     return render_template("index.html")
 
 
-@app.route("/api/schedule", methods=["GET"])
+@bp.route("/api/schedule", methods=["GET"])
 def api_get_schedule():
     """現在のスケジュール設定を返す"""
     return jsonify(schedule_manager.load_schedule())
 
 
-@app.route("/api/schedule", methods=["POST"])
+@bp.route("/api/schedule", methods=["POST"])
 def api_set_schedule():
     """スケジュール設定を更新する"""
     data = request.get_json()
@@ -132,7 +133,7 @@ def api_set_schedule():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
-@app.route("/api/status", methods=["GET"])
+@bp.route("/api/status", methods=["GET"])
 def api_status():
     """モニタープロセスのステータスを返す"""
     status = get_process_status()
@@ -140,7 +141,7 @@ def api_status():
     return jsonify({"status": status, "pid": pid})
 
 
-@app.route("/api/start", methods=["POST"])
+@bp.route("/api/start", methods=["POST"])
 def api_start():
     """モニタープロセスを起動する"""
     data = request.get_json() or {}
@@ -149,11 +150,14 @@ def api_start():
     return jsonify(result), 200 if result["ok"] else 400
 
 
-@app.route("/api/stop", methods=["POST"])
+@bp.route("/api/stop", methods=["POST"])
 def api_stop():
     """モニタープロセスを停止する"""
     result = stop_process()
     return jsonify(result), 200 if result["ok"] else 400
+
+
+app.register_blueprint(bp)
 
 
 # ── エントリーポイント ────────────────────────────────────────
@@ -161,5 +165,5 @@ def api_stop():
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     port = int(os.environ.get("WEB_PORT", 5000))
-    print(f"JR監視コントロールパネルを起動中... http://localhost:{port}")
+    print(f"JR監視コントロールパネルを起動中... http://localhost:{port}/jr-monitor")
     app.run(host="0.0.0.0", port=port, debug=False)
