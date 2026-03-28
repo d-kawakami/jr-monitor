@@ -29,6 +29,7 @@ jr-monitor/
 ├── schedule.json          # 曜日別スケジュール設定（自動生成）
 ├── requirements.txt       # 依存ライブラリ
 ├── jr-monitor.service     # systemd ユニットファイル
+├── deploy.sh              # デプロイスクリプト（~/jr-monitor → /opt/jr-monitor）
 ├── .env.example           # 環境変数テンプレート
 ├── templates/
 │   └── index.html         # Webコントロールパネル UI
@@ -125,6 +126,7 @@ python web_app.py
 |------|------|
 | **起動 / 停止** | ボタン1つでモニタープロセスを制御 |
 | **ドライランモード** | LINE送信なしで動作確認（起動時に選択） |
+| **起動・停止通知** | モニター起動・停止時のLINE通知をON/OFF切り替え |
 | **リアルタイムステータス** | 稼働中/停止中を表示、30秒ごとに自動更新 |
 | **曜日別スケジュール** | 月〜日それぞれ個別に有効/無効を切り替え |
 | **時間帯管理** | 各曜日に複数の時間帯を追加・編集・削除 |
@@ -196,6 +198,11 @@ sudo chown pi:pi /opt/jr-monitor /var/lib/jr-monitor
 rsync -av jr-monitor/ pi@raspberrypi.local:/opt/jr-monitor/
 ```
 
+> **継続的な開発には:** `~/jr-monitor` にリポジトリをクローンし、`deploy.sh` で `/opt/jr-monitor` へ同期するのを推奨します:
+> ```bash
+> cd ~/jr-monitor && git pull && bash deploy.sh
+> ```
+
 #### 2. Python 仮想環境の作成と依存インストール
 
 ```bash
@@ -229,6 +236,8 @@ sudo mkdir -p /var/log
 ```
 
 #### 5. systemd サービスのインストール
+
+サービスは `web_app.py` を起動し、`web_app.py` が子プロセスとして `monitor.py` を管理します。これによりブラウザだけでモニターを制御できます。
 
 ```bash
 sudo cp /opt/jr-monitor/jr-monitor.service /etc/systemd/system/

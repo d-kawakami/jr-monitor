@@ -28,6 +28,7 @@ jr-monitor/
 ├── schedule.json          # Per-day schedule config (auto-generated)
 ├── requirements.txt       # Dependencies
 ├── jr-monitor.service     # systemd unit file
+├── deploy.sh              # Deployment script (~/jr-monitor → /opt/jr-monitor)
 ├── .env.example           # Environment variable template
 ├── templates/
 │   └── index.html         # Web control panel UI
@@ -129,6 +130,7 @@ Then open `http://localhost:5000` in a browser.
 |---------|-------------|
 | **Start / Stop** | Launch or terminate the monitor process with one click |
 | **Dry-run mode** | Start the monitor without sending LINE messages (for testing) |
+| **Start/stop notifications** | Toggle whether LINE is notified when the monitor starts or stops |
 | **Live status** | Running/stopped indicator, auto-refreshes every 30 seconds |
 | **Per-day schedule** | Enable or disable monitoring for each day independently |
 | **Time windows** | Add, edit, or remove multiple time windows per day |
@@ -200,6 +202,11 @@ sudo chown pi:pi /opt/jr-monitor /var/lib/jr-monitor
 rsync -av jr-monitor/ pi@raspberrypi.local:/opt/jr-monitor/
 ```
 
+> **Tip — For ongoing development:** Clone the repo to `~/jr-monitor` and use `deploy.sh` to sync changes to `/opt/jr-monitor`:
+> ```bash
+> cd ~/jr-monitor && git pull && bash deploy.sh
+> ```
+
 #### 2. Create Python Virtual Environment and Install Dependencies
 
 ```bash
@@ -233,6 +240,8 @@ sudo mkdir -p /var/log
 ```
 
 #### 5. Install systemd Service
+
+The service runs `web_app.py` (which manages `monitor.py` as a child process), so you can control the monitor from the browser without touching the command line.
 
 ```bash
 sudo cp /opt/jr-monitor/jr-monitor.service /etc/systemd/system/

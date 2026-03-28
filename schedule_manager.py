@@ -19,6 +19,7 @@ DAY_NAMES = ["月", "火", "水", "木", "金", "土", "日"]
 DEFAULT_WINDOWS = [["05:30", "08:30"], ["14:30", "20:30"]]
 
 DEFAULT_SCHEDULE: dict = {
+    "notify_on_start_stop": True,
     "days": {
         str(i): {
             "name": DAY_NAMES[i],

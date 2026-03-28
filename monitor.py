@@ -116,12 +116,13 @@ def notify(token: str, user_id: str, text: str, dry_run: bool) -> None:
         line_client.send_message(token, user_id, text)
 
 
-def run(dry_run: bool = False) -> None:
+def run(dry_run: bool = False, notify_start_stop: bool = True) -> None:
     """
     監視メインループ
 
     Args:
         dry_run: Trueの場合はLINE送信を行わない
+        notify_start_stop: Falseの場合は起動・停止時のLINE通知を送らない
     """
     state_path = Path(config.STATE_FILE)
 
@@ -136,8 +137,8 @@ def run(dry_run: bool = False) -> None:
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
 
-    logger.info("JR運行障害モニター起動 (dry_run=%s)", dry_run)
-    if is_monitoring_time():
+    logger.info("JR運行障害モニター起動 (dry_run=%s, notify_start_stop=%s)", dry_run, notify_start_stop)
+    if notify_start_stop and is_monitoring_time():
         notify(
             config.LINE_CHANNEL_TOKEN,
             config.LINE_USER_ID,
@@ -206,7 +207,7 @@ def run(dry_run: bool = False) -> None:
 
     # 終了通知
     logger.info("監視終了")
-    if is_monitoring_time():
+    if notify_start_stop and is_monitoring_time():
         notify(
             config.LINE_CHANNEL_TOKEN,
             config.LINE_USER_ID,
@@ -223,10 +224,15 @@ def main() -> None:
         action="store_true",
         help="LINE送信を行わずログ出力のみで動作確認する",
     )
+    parser.add_argument(
+        "--no-start-stop-notify",
+        action="store_true",
+        help="起動・停止時のLINE通知を送らない",
+    )
     args = parser.parse_args()
 
     setup_logging(config.LOG_FILE, dry_run=args.dry_run)
-    run(dry_run=args.dry_run)
+    run(dry_run=args.dry_run, notify_start_stop=not args.no_start_stop_notify)
 
 
 if __name__ == "__main__":

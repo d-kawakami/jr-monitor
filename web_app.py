@@ -64,6 +64,9 @@ def start_process(dry_run: bool = False) -> dict:
     cmd = [sys.executable, str(BASE_DIR / "monitor.py")]
     if dry_run:
         cmd.append("--dry-run")
+    schedule = schedule_manager.load_schedule()
+    if not schedule.get("notify_on_start_stop", True):
+        cmd.append("--no-start-stop-notify")
 
     env = os.environ.copy()
     log_path = BASE_DIR / "monitor_stdout.log"

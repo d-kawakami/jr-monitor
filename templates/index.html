@@ -128,6 +128,12 @@
     .btn-save { background: var(--primary); color: white; }
     .btn-save:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
 
+    .option-labels {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-left: auto;
+    }
     .dry-run-label {
       display: flex;
       align-items: center;
@@ -135,7 +141,6 @@
       font-size: 13px;
       color: var(--text-muted);
       cursor: pointer;
-      margin-left: auto;
       user-select: none;
     }
     .dry-run-label input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
@@ -343,7 +348,7 @@
     @media (max-width: 480px) {
       .days-grid { grid-template-columns: 1fr; }
       .btn-row { flex-direction: column; align-items: stretch; }
-      .dry-run-label { margin-left: 0; }
+      .option-labels { margin-left: 0; }
       .btn { justify-content: center; }
     }
   </style>
@@ -371,10 +376,16 @@
     <div class="btn-row">
       <button class="btn btn-start" id="btnStart" onclick="startMonitor()" disabled>▶ 起動</button>
       <button class="btn btn-stop" id="btnStop" onclick="stopMonitor()" disabled>■ 停止</button>
-      <label class="dry-run-label">
-        <input type="checkbox" id="dryRunCheck">
-        ドライラン（LINE送信なし）
-      </label>
+      <div class="option-labels">
+        <label class="dry-run-label">
+          <input type="checkbox" id="dryRunCheck">
+          ドライラン（LINE送信なし）
+        </label>
+        <label class="dry-run-label">
+          <input type="checkbox" id="notifyStartStopCheck" onchange="saveNotifyStartStop(this.checked)">
+          起動・停止時にLINE通知
+        </label>
+      </div>
     </div>
   </div>
 
@@ -605,6 +616,27 @@
     }
   }
 
+  // ─── Notify on start/stop ─────────────────────────────────────
+  async function saveNotifyStartStop(checked) {
+    if (!scheduleData) return;
+    scheduleData.notify_on_start_stop = checked;
+    try {
+      const r = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(scheduleData)
+      });
+      const d = await r.json();
+      if (d.ok) {
+        showToast(checked ? '🔔 起動・停止通知をONにしました' : '🔕 起動・停止通知をOFFにしました', 'success');
+      } else {
+        showToast('❌ ' + (d.error || '保存に失敗しました'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ 通信エラー', 'error');
+    }
+  }
+
   // ─── Init ─────────────────────────────────────────────────────
   async function init() {
     await refreshStatus();
@@ -612,6 +644,8 @@
       const r = await fetch('/api/schedule');
       const d = await r.json();
       renderDays(d);
+      const notifyCheck = document.getElementById('notifyStartStopCheck');
+      notifyCheck.checked = d.notify_on_start_stop !== false;
     } catch(e) {
       showToast('❌ スケジュールの読み込みに失敗しました', 'error');
     }
