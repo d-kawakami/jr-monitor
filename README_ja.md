@@ -118,7 +118,7 @@ CHECK_INTERVAL: int = 60  # 60秒ごとに運行情報を取得
 python web_app.py
 ```
 
-起動後、ブラウザで `http://localhost:5000` を開きます。
+起動後、ブラウザで `http://localhost:5000/jr-monitor` を開きます。
 
 ### 機能一覧
 
@@ -136,6 +136,7 @@ python web_app.py
 
 ```bash
 WEB_PORT=8080 python web_app.py
+# http://localhost:8080/jr-monitor でアクセス
 ```
 
 ---
