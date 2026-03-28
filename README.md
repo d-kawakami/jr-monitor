@@ -3,6 +3,9 @@
 [日本語版はこちら](README_ja.md)
 
 This system periodically monitors JR (East Japan / West Japan) train disruptions, delays, and cancellations via Yahoo! Transit Info, and sends instant push notifications through the LINE Messaging API when an anomaly (disruption, cancellation, etc.) is detected.
+
+A built-in **web control panel** lets you start/stop the monitor and configure per-day monitoring schedules from any browser — no command line required after initial setup.
+
 The instructions below use Raspberry Pi 5 as a deployment example.
 Note: You must create a LINE Official Account before you can access the LINE Developers Console.
 
@@ -17,12 +20,17 @@ Note: You must create a LINE Official Account before you can access the LINE Dev
 jr-monitor/
 ├── config.py              # Configuration (tokens, line names, interval)
 ├── monitor.py             # Main loop
+├── schedule_manager.py    # Per-day schedule management
+├── web_app.py             # Web control panel (Flask)
 ├── line_client.py         # LINE Messaging API wrapper
 ├── scraper.py             # Yahoo! Transit Info scraper
 ├── state.py               # State management (JSON persistence)
+├── schedule.json          # Per-day schedule config (auto-generated)
 ├── requirements.txt       # Dependencies
 ├── jr-monitor.service     # systemd unit file
 ├── .env.example           # Environment variable template
+├── templates/
+│   └── index.html         # Web control panel UI
 └── tests/
     ├── test_scraper.py
     ├── test_line.py
@@ -83,18 +91,17 @@ TARGET_LINES: list[str] = [
 ]
 ```
 
-### 5. Configure Monitoring Hours
+### 5. Configure Monitoring Schedule
 
-Edit `MONITORING_WINDOWS` in `config.py` to specify the time windows during which notifications are sent.
-List one or more `(start_time, end_time)` tuples in `"HH:MM"` format.
-Outside of the specified windows, neither scraping nor notifications will occur.
+Monitoring hours are managed through the **web control panel** (see below).
+The schedule can be set independently for each day of the week, with multiple time windows per day.
 
-```python
-MONITORING_WINDOWS: list[tuple[str, str]] = [
-    ("05:30", "08:30"),   # Morning commute hours
-    ("14:30", "20:30"),   # Evening / night commute hours
-]
-```
+The default schedule (applied when no `schedule.json` exists) mirrors the legacy `MONITORING_WINDOWS` in `config.py`:
+
+| Day | Enabled | Time windows |
+|-----|---------|--------------|
+| Mon – Fri | Yes | 05:30–08:30, 14:30–20:30 |
+| Sat – Sun | No | — |
 
 ### 6. Configure Check Interval
 
@@ -102,6 +109,35 @@ Set the check interval in seconds via `CHECK_INTERVAL` in `config.py` (default: 
 
 ```python
 CHECK_INTERVAL: int = 60  # Fetch train status every 60 seconds
+```
+
+---
+
+## Web Control Panel
+
+Start the control panel with:
+
+```bash
+python web_app.py
+```
+
+Then open `http://localhost:5000` in a browser.
+
+### Features
+
+| Feature | Description |
+|---------|-------------|
+| **Start / Stop** | Launch or terminate the monitor process with one click |
+| **Dry-run mode** | Start the monitor without sending LINE messages (for testing) |
+| **Live status** | Running/stopped indicator, auto-refreshes every 30 seconds |
+| **Per-day schedule** | Enable or disable monitoring for each day independently |
+| **Time windows** | Add, edit, or remove multiple time windows per day |
+| **Save** | Writes `schedule.json`; the monitor picks up changes on its next cycle |
+
+You can change the port with the `WEB_PORT` environment variable:
+
+```bash
+WEB_PORT=8080 python web_app.py
 ```
 
 ---
@@ -122,7 +158,7 @@ pytest tests/ -v --cov=. --cov-report=term-missing
 
 ## Dry Run (Smoke Test)
 
-You can verify the system works without actually sending LINE messages by using dry-run mode:
+You can also verify the monitor works from the command line without sending LINE messages:
 
 ```bash
 python monitor.py --dry-run
@@ -133,11 +169,13 @@ Press `Ctrl+C` to stop.
 
 ---
 
-## Production Run
+## Production Run (CLI)
 
 ```bash
 python monitor.py
 ```
+
+For production, using the web control panel or the systemd service (see below) is recommended.
 
 ---
 
@@ -240,6 +278,9 @@ sudo journalctl -u jr-monitor -n 100
 
 # Read log file directly
 tail -f /var/log/jr-monitor.log
+
+# Web app stdout log (when started via web control panel)
+tail -f monitor_stdout.log
 ```
 
 ---
@@ -252,6 +293,7 @@ tail -f /var/log/jr-monitor.log
 | Disruptions not detected | Train line name mismatch | Compare actual display names on Yahoo! Transit Info with `TARGET_LINES` |
 | `ModuleNotFoundError` | Virtual environment not activated | Run `source venv/bin/activate` |
 | `PermissionError` | No write permission for log/state files | Change the paths in `config.py` to a writable location |
+| Monitor doesn't start from web panel | PID file stale | Delete `monitor.pid` and try again |
 
 ---
 

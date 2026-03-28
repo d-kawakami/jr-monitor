@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JR監視 コントロールパネル</title>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-dark: #1558b0;
+      --success: #34a853;
+      --danger: #ea4335;
+      --warning: #fbbc04;
+      --bg: #f0f4f8;
+      --card-bg: #ffffff;
+      --text: #202124;
+      --text-muted: #5f6368;
+      --border: #dadce0;
+      --shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.15);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --sat: #ff6d6d;
+      --sun: #ff9800;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* ─── Header ─── */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: var(--shadow-lg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header .logo { font-size: 24px; }
+    header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.3px; }
+    header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 1px; }
+
+    /* ─── Main container ─── */
+    .container { max-width: 800px; margin: 0 auto; padding: 20px 16px; }
+
+    /* ─── Cards ─── */
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ─── Server Control ─── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .status-dot.running {
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(52,168,83,0.2);
+      animation: pulse 2s infinite;
+    }
+    .status-dot.stopped { background: var(--danger); }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(52,168,83,0.2); }
+      50% { box-shadow: 0 0 0 6px rgba(52,168,83,0.1); }
+    }
+    .status-text { font-size: 15px; font-weight: 500; }
+    .status-pid { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn {
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-start { background: var(--success); color: white; }
+    .btn-start:hover:not(:disabled) { background: #2d9249; transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-stop { background: var(--danger); color: white; }
+    .btn-stop:hover:not(:disabled) { background: #c5271e; transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-save { background: var(--primary); color: white; }
+    .btn-save:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+
+    .dry-run-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      margin-left: auto;
+      user-select: none;
+    }
+    .dry-run-label input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+    /* ─── Toast ─── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #323232;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      box-shadow: var(--shadow-lg);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--danger); }
+
+    /* ─── Days Grid ─── */
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    /* ─── Day Card ─── */
+    .day-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      border: 2px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .day-card.enabled { border-color: var(--primary); }
+    .day-card.sat.enabled { border-color: var(--sat); }
+    .day-card.sun.enabled { border-color: var(--sun); }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      gap: 10px;
+      background: #f8f9fa;
+      border-bottom: 1px solid var(--border);
+    }
+    .day-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+      background: var(--border);
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .day-card.enabled .day-badge {
+      background: var(--primary);
+      color: white;
+    }
+    .day-card.sat.enabled .day-badge { background: var(--sat); }
+    .day-card.sun.enabled .day-badge { background: var(--sun); }
+
+    .day-name { font-size: 15px; font-weight: 600; flex: 1; }
+    .day-status { font-size: 12px; color: var(--text-muted); }
+
+    /* Toggle Switch */
+    .toggle-wrap { margin-left: auto; }
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      display: block;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    .toggle input:checked + .toggle-slider { background: var(--primary); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+    .day-card.sat .toggle input:checked + .toggle-slider { background: var(--sat); }
+    .day-card.sun .toggle input:checked + .toggle-slider { background: var(--sun); }
+
+    /* Day body */
+    .day-body { padding: 12px 16px 14px; }
+
+    .windows-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+
+    .window-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f8f9fa;
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+    }
+    .window-row input[type="time"] {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 14px;
+      color: var(--text);
+      background: white;
+      outline: none;
+      flex: 1;
+      min-width: 0;
+      transition: border-color 0.2s;
+    }
+    .window-row input[type="time"]:focus { border-color: var(--primary); }
+    .window-sep { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+    .btn-del-window {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      font-size: 16px;
+      line-height: 1;
+      flex-shrink: 0;
+      transition: color 0.2s;
+    }
+    .btn-del-window:hover { color: var(--danger); }
+
+    .btn-add-window {
+      background: none;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      width: 100%;
+      padding: 7px;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-add-window:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: #e8f0fe;
+    }
+
+    .no-windows {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      padding: 10px 0 6px;
+    }
+
+    /* ─── Save row ─── */
+    .save-row {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 4px;
+    }
+    .save-row .btn-save {
+      width: 100%;
+      justify-content: center;
+      padding: 12px;
+      font-size: 15px;
+    }
+
+    /* ─── Section heading ─── */
+    .section-heading {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .section-heading small {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 480px) {
+      .days-grid { grid-template-columns: 1fr; }
+      .btn-row { flex-direction: column; align-items: stretch; }
+      .dry-run-label { margin-left: 0; }
+      .btn { justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="logo">🚆</span>
+  <div>
+    <h1>JR監視 コントロールパネル</h1>
+    <div class="subtitle">運行障害 LINE通知モニター</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- サーバー制御 -->
+  <div class="card">
+    <div class="card-title">⚙️ サーバー制御</div>
+    <div class="status-row">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-text" id="statusText">確認中...</div>
+      <div class="status-pid" id="statusPid"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-start" id="btnStart" onclick="startMonitor()" disabled>▶ 起動</button>
+      <button class="btn btn-stop" id="btnStop" onclick="stopMonitor()" disabled>■ 停止</button>
+      <label class="dry-run-label">
+        <input type="checkbox" id="dryRunCheck">
+        ドライラン（LINE送信なし）
+      </label>
+    </div>
+  </div>
+
+  <!-- スケジュール設定 -->
+  <div class="card">
+    <div class="section-heading">
+      📅 監視スケジュール
+      <small>曜日・時間帯を設定</small>
+    </div>
+    <div class="days-grid" id="daysGrid">
+      <!-- JS で生成 -->
+    </div>
+    <br>
+    <div class="save-row">
+      <button class="btn btn-save" onclick="saveSchedule()">💾 スケジュールを保存</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const DAY_NAMES_JP = ['月', '火', '水', '木', '金', '土', '日'];
+  const DAY_LABELS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
+  let scheduleData = null;
+
+  // ─── Toast ───────────────────────────────────────────────────
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  // ─── Status ──────────────────────────────────────────────────
+  async function refreshStatus() {
+    try {
+      const r = await fetch('/api/status');
+      const d = await r.json();
+      const dot = document.getElementById('statusDot');
+      const txt = document.getElementById('statusText');
+      const pid = document.getElementById('statusPid');
+      const btnStart = document.getElementById('btnStart');
+      const btnStop = document.getElementById('btnStop');
+
+      if (d.status === 'running') {
+        dot.className = 'status-dot running';
+        txt.textContent = '稼働中';
+        txt.style.color = 'var(--success)';
+        pid.textContent = d.pid ? `PID: ${d.pid}` : '';
+        btnStart.disabled = true;
+        btnStop.disabled = false;
+      } else {
+        dot.className = 'status-dot stopped';
+        txt.textContent = '停止中';
+        txt.style.color = 'var(--danger)';
+        pid.textContent = '';
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // ─── Start / Stop ─────────────────────────────────────────────
+  async function startMonitor() {
+    const dryRun = document.getElementById('dryRunCheck').checked;
+    document.getElementById('btnStart').disabled = true;
+    try {
+      const r = await fetch('/api/start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({dry_run: dryRun})
+      });
+      const d = await r.json();
+      if (d.ok) {
+        showToast('✅ モニターを起動しました', 'success');
+      } else {
+        showToast('❌ ' + (d.error || '起動に失敗しました'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ 通信エラー', 'error');
+    }
+    setTimeout(refreshStatus, 800);
+  }
+
+  async function stopMonitor() {
+    document.getElementById('btnStop').disabled = true;
+    try {
+      const r = await fetch('/api/stop', {method: 'POST'});
+      const d = await r.json();
+      if (d.ok) {
+        showToast('🛑 モニターを停止しました');
+      } else {
+        showToast('❌ ' + (d.error || '停止に失敗しました'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ 通信エラー', 'error');
+    }
+    setTimeout(refreshStatus, 800);
+  }
+
+  // ─── Schedule rendering ───────────────────────────────────────
+  function renderDays(data) {
+    scheduleData = data;
+    const grid = document.getElementById('daysGrid');
+    grid.innerHTML = '';
+
+    for (let i = 0; i < 7; i++) {
+      const key = String(i);
+      const day = data.days[key] || {name: DAY_NAMES_JP[i], enabled: false, windows: []};
+      const isSat = i === 5;
+      const isSun = i === 6;
+      const extraClass = isSat ? 'sat' : isSun ? 'sun' : '';
+
+      const card = document.createElement('div');
+      card.className = 'day-card' + (extraClass ? ' ' + extraClass : '') + (day.enabled ? ' enabled' : '');
+      card.dataset.dayKey = key;
+
+      card.innerHTML = `
+        <div class="day-header">
+          <div class="day-badge">${DAY_NAMES_JP[i]}</div>
+          <div>
+            <div class="day-name">${DAY_LABELS[i]}</div>
+            <div class="day-status">${day.enabled ? (day.windows.length > 0 ? day.windows.map(w => w[0]+'〜'+w[1]).join(', ') : '時間帯未設定') : '監視しない'}</div>
+          </div>
+          <div class="toggle-wrap">
+            <label class="toggle">
+              <input type="checkbox" ${day.enabled ? 'checked' : ''} onchange="toggleDay('${key}', this.checked)">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        <div class="day-body">
+          <div class="windows-list" id="windows-${key}"></div>
+          <button class="btn-add-window" onclick="addWindow('${key}')">＋ 時間帯を追加</button>
+        </div>
+      `;
+
+      grid.appendChild(card);
+      renderWindows(key, day.windows);
+    }
+  }
+
+  function renderWindows(key, windows) {
+    const container = document.getElementById('windows-' + key);
+    container.innerHTML = '';
+
+    if (!windows || windows.length === 0) {
+      container.innerHTML = '<div class="no-windows">時間帯が設定されていません</div>';
+      return;
+    }
+
+    windows.forEach((w, idx) => {
+      const row = document.createElement('div');
+      row.className = 'window-row';
+      row.innerHTML = `
+        <input type="time" value="${w[0]}" onchange="updateWindow('${key}', ${idx}, 0, this.value)">
+        <span class="window-sep">〜</span>
+        <input type="time" value="${w[1]}" onchange="updateWindow('${key}', ${idx}, 1, this.value)">
+        <button class="btn-del-window" onclick="deleteWindow('${key}', ${idx})" title="削除">✕</button>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function updateDayStatusLabel(key) {
+    const day = scheduleData.days[key];
+    const card = document.querySelector(`[data-day-key="${key}"]`);
+    if (!card) return;
+    const statusEl = card.querySelector('.day-status');
+    if (day.enabled) {
+      statusEl.textContent = day.windows.length > 0
+        ? day.windows.map(w => w[0]+'〜'+w[1]).join(', ')
+        : '時間帯未設定';
+    } else {
+      statusEl.textContent = '監視しない';
+    }
+  }
+
+  function toggleDay(key, enabled) {
+    scheduleData.days[key].enabled = enabled;
+    const card = document.querySelector(`[data-day-key="${key}"]`);
+    if (enabled) card.classList.add('enabled');
+    else card.classList.remove('enabled');
+    updateDayStatusLabel(key);
+  }
+
+  function addWindow(key) {
+    if (!scheduleData.days[key].windows) scheduleData.days[key].windows = [];
+    scheduleData.days[key].windows.push(['08:00', '10:00']);
+    renderWindows(key, scheduleData.days[key].windows);
+    updateDayStatusLabel(key);
+  }
+
+  function deleteWindow(key, idx) {
+    scheduleData.days[key].windows.splice(idx, 1);
+    renderWindows(key, scheduleData.days[key].windows);
+    updateDayStatusLabel(key);
+  }
+
+  function updateWindow(key, idx, pos, value) {
+    scheduleData.days[key].windows[idx][pos] = value;
+    updateDayStatusLabel(key);
+  }
+
+  // ─── Save schedule ────────────────────────────────────────────
+  async function saveSchedule() {
+    try {
+      const r = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(scheduleData)
+      });
+      const d = await r.json();
+      if (d.ok) {
+        showToast('✅ スケジュールを保存しました', 'success');
+        renderDays(scheduleData);
+      } else {
+        showToast('❌ ' + (d.error || '保存に失敗しました'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ 通信エラー', 'error');
+    }
+  }
+
+  // ─── Init ─────────────────────────────────────────────────────
+  async function init() {
+    await refreshStatus();
+    try {
+      const r = await fetch('/api/schedule');
+      const d = await r.json();
+      renderDays(d);
+    } catch(e) {
+      showToast('❌ スケジュールの読み込みに失敗しました', 'error');
+    }
+    // 30秒ごとにステータスを自動更新
+    setInterval(refreshStatus, 30000);
+  }
+
+  init();
+</script>
+
+</body>
+</html>

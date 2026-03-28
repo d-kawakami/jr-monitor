@@ -14,6 +14,7 @@ from pathlib import Path
 
 import config
 import line_client
+import schedule_manager
 import scraper
 import state
 
@@ -60,18 +61,12 @@ def setup_logging(log_file: str, dry_run: bool = False) -> None:
 
 def is_monitoring_time() -> bool:
     """
-    現在時刻が設定された監視時間帯内かどうかを返す
+    現在の曜日・時刻が監視時間帯内かどうかを返す（schedule.json を参照）
 
     Returns:
         監視時間帯内であればTrue
     """
-    now = datetime.datetime.now().time()
-    for start_str, end_str in config.MONITORING_WINDOWS:
-        h_s, m_s = map(int, start_str.split(":"))
-        h_e, m_e = map(int, end_str.split(":"))
-        if datetime.time(h_s, m_s) <= now <= datetime.time(h_e, m_e):
-            return True
-    return False
+    return schedule_manager.is_monitoring_time()
 
 
 def build_disruption_message(info: dict) -> str:
@@ -155,8 +150,7 @@ def run(dry_run: bool = False) -> None:
     while not shutdown_requested:
         try:
             if not is_monitoring_time():
-                windows = ", ".join(f"{s}〜{e}" for s, e in config.MONITORING_WINDOWS)
-                logger.debug("監視時間帯外のためスキップ (監視時間: %s)", windows)
+                logger.debug("監視時間帯外のためスキップ (本日: %s)", schedule_manager.current_day_summary())
                 # シャットダウン要求があれば即終了
                 if shutdown_requested:
                     break
