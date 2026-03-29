@@ -22,16 +22,20 @@ jr-monitor/
 ├── monitor.py             # Main loop
 ├── schedule_manager.py    # Per-day schedule management
 ├── web_app.py             # Web control panel (Flask)
+├── auth.py                # User authentication (password hashing)
 ├── line_client.py         # LINE Messaging API wrapper
 ├── scraper.py             # Yahoo! Transit Info scraper
 ├── state.py               # State management (JSON persistence)
 ├── schedule.json          # Per-day schedule config (auto-generated)
+├── users.json             # User credentials (auto-generated, bcrypt hashed)
+├── .secret_key            # Flask session secret key (auto-generated)
 ├── requirements.txt       # Dependencies
 ├── jr-monitor.service     # systemd unit file
 ├── deploy.sh              # Deployment script (~/jr-monitor → /opt/jr-monitor)
 ├── .env.example           # Environment variable template
 ├── templates/
-│   └── index.html         # Web control panel UI
+│   ├── index.html         # Web control panel UI
+│   └── login.html         # Login page
 └── tests/
     ├── test_scraper.py
     ├── test_line.py
@@ -71,6 +75,14 @@ export LINE_USER_ID="U..."
 # or
 source .env   # use python-dotenv for dotenv-format files
 ```
+
+Optionally, set a fixed Flask session key to keep sessions valid across restarts:
+
+```bash
+export SECRET_KEY="any-long-random-string"
+```
+
+If `SECRET_KEY` is not set, a key is automatically generated and saved to `.secret_key` on first launch.
 
 ### 4. Configure Target Train Lines
 
@@ -124,6 +136,18 @@ python web_app.py
 
 Then open `http://localhost:5000/jr-monitor` in a browser.
 
+### Authentication
+
+The control panel requires a login. The default credentials are:
+
+| Username | Password |
+|----------|----------|
+| `admin`  | *(empty — press Login with no password)* |
+
+**Set a password immediately after your first login** via the user management section of the panel. Leaving the admin account with no password is a security risk, especially if the panel is accessible over a network.
+
+User data is stored in `users.json` (passwords are bcrypt-hashed). You can manage users entirely from the panel UI without editing files directly.
+
 ### Features
 
 | Feature | Description |
@@ -135,6 +159,7 @@ Then open `http://localhost:5000/jr-monitor` in a browser.
 | **Per-day schedule** | Enable or disable monitoring for each day independently |
 | **Time windows** | Add, edit, or remove multiple time windows per day |
 | **Save** | Writes `schedule.json`; the monitor picks up changes on its next cycle |
+| **User management** | Add or delete users, and change passwords |
 
 You can change the port with the `WEB_PORT` environment variable:
 
@@ -227,11 +252,17 @@ Contents:
 ```
 LINE_CHANNEL_TOKEN=your_channel_access_token
 LINE_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SECRET_KEY=your-long-random-secret-key
 ```
 
 ```bash
 sudo chmod 600 /etc/jr-monitor.env
 ```
+
+> **Note:** `SECRET_KEY` keeps Flask sessions valid across service restarts. Generate a suitable value with:
+> ```bash
+> python3 -c "import secrets; print(secrets.token_hex(32))"
+> ```
 
 #### 4. Create Log Directory
 
@@ -304,6 +335,8 @@ tail -f monitor_stdout.log
 | `ModuleNotFoundError` | Virtual environment not activated | Run `source venv/bin/activate` |
 | `PermissionError` | No write permission for log/state files | Change the paths in `config.py` to a writable location |
 | Monitor doesn't start from web panel | PID file stale | Delete `monitor.pid` and try again |
+| Logged out on every service restart | `SECRET_KEY` not set | Add `SECRET_KEY` to `/etc/jr-monitor.env` (see step 3) |
+| Cannot log in to web panel | Forgot password | Delete `users.json`; the default `admin` / (no password) account will be recreated on next startup |
 
 ---
 

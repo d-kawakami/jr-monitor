@@ -23,16 +23,20 @@ jr-monitor/
 ├── monitor.py             # メインループ
 ├── schedule_manager.py    # 曜日別スケジュール管理
 ├── web_app.py             # Webコントロールパネル（Flask）
+├── auth.py                # ユーザー認証（パスワードハッシュ管理）
 ├── line_client.py         # LINE Messaging API ラッパー
 ├── scraper.py             # Yahoo!路線情報スクレイパー
 ├── state.py               # 状態管理（JSON永続化）
 ├── schedule.json          # 曜日別スケジュール設定（自動生成）
+├── users.json             # ユーザー情報（自動生成・bcryptハッシュ）
+├── .secret_key            # Flaskセッション用シークレットキー（自動生成）
 ├── requirements.txt       # 依存ライブラリ
 ├── jr-monitor.service     # systemd ユニットファイル
 ├── deploy.sh              # デプロイスクリプト（~/jr-monitor → /opt/jr-monitor）
 ├── .env.example           # 環境変数テンプレート
 ├── templates/
-│   └── index.html         # Webコントロールパネル UI
+│   ├── index.html         # Webコントロールパネル UI
+│   └── login.html         # ログインページ
 └── tests/
     ├── test_scraper.py
     ├── test_line.py
@@ -71,6 +75,14 @@ export LINE_USER_ID="U..."
 # または
 source .env   # dotenv 形式の場合は python-dotenv を利用
 ```
+
+Flaskセッションを再起動後も維持したい場合は `SECRET_KEY` を設定します:
+
+```bash
+export SECRET_KEY="任意の長いランダム文字列"
+```
+
+未設定の場合は初回起動時に自動生成されて `.secret_key` ファイルに保存されますが、サービス再起動のたびにセッションが無効になります。
 
 ### 4. 監視路線の設定
 
@@ -120,6 +132,18 @@ python web_app.py
 
 起動後、ブラウザで `http://localhost:5000/jr-monitor` を開きます。
 
+### 認証
+
+コントロールパネルにはログインが必要です。初期ユーザーは以下のとおりです:
+
+| ユーザー名 | パスワード |
+|-----------|-----------|
+| `admin`   | *(未設定 — パスワード欄を空にしてログイン)* |
+
+**初回ログイン後は必ずパスワードを設定してください。** ネットワーク越しにアクセス可能な環境でパスワード未設定のまま運用するのはセキュリティ上のリスクです。パスワードの設定はパネル内のユーザー管理から行います。
+
+ユーザー情報は `users.json` に保存されます（パスワードはbcryptでハッシュ化）。
+
 ### 機能一覧
 
 | 機能 | 説明 |
@@ -131,6 +155,7 @@ python web_app.py
 | **曜日別スケジュール** | 月〜日それぞれ個別に有効/無効を切り替え |
 | **時間帯管理** | 各曜日に複数の時間帯を追加・編集・削除 |
 | **保存** | `schedule.json` に書き込み、次のサイクルから反映 |
+| **ユーザー管理** | ユーザーの追加・削除、パスワードの変更 |
 
 ポートは `WEB_PORT` 環境変数で変更できます:
 
@@ -223,11 +248,17 @@ sudo nano /etc/jr-monitor.env
 ```
 LINE_CHANNEL_TOKEN=your_channel_access_token
 LINE_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+SECRET_KEY=ランダムな長い文字列
 ```
 
 ```bash
 sudo chmod 600 /etc/jr-monitor.env
 ```
+
+> **補足:** `SECRET_KEY` はFlaskのセッション署名に使われます。サービス再起動後もログイン状態を維持するために設定してください。以下のコマンドで生成できます:
+> ```bash
+> python3 -c "import secrets; print(secrets.token_hex(32))"
+> ```
 
 #### 4. ログディレクトリの作成
 
@@ -300,6 +331,8 @@ tail -f monitor_stdout.log
 | `ModuleNotFoundError` | 仮想環境が有効でない | `source venv/bin/activate` で有効化 |
 | `PermissionError` | ログ/状態ファイルへの書き込み権限なし | `config.py` のパスを書き込み可能な場所に変更 |
 | Webパネルから起動できない | PID ファイルが残存 | `monitor.pid` を削除して再試行 |
+| サービス再起動のたびにログアウトされる | `SECRET_KEY` が未設定 | `/etc/jr-monitor.env` に `SECRET_KEY` を追加（手順3参照） |
+| パスワードを忘れてログインできない | パスワード忘れ | `users.json` を削除する。次回起動時に `admin` /（パスワード未設定）のデフォルトアカウントが再生成される |
 
 ---
 
