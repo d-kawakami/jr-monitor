@@ -50,6 +50,28 @@
     header .logo { font-size: 24px; }
     header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.3px; }
     header .subtitle { font-size: 12px; opacity: 0.85; margin-top: 1px; }
+    header .header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    header .username-badge {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+    header .btn-header {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      color: white;
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    header .btn-header:hover { background: rgba(255,255,255,0.28); }
 
     /* ─── Main container ─── */
     .container { max-width: 800px; margin: 0 auto; padding: 20px 16px; }
@@ -127,6 +149,18 @@
     .btn-stop:hover:not(:disabled) { background: #c5271e; transform: translateY(-1px); box-shadow: var(--shadow); }
     .btn-save { background: var(--primary); color: white; }
     .btn-save:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn-secondary {
+      background: #f1f3f4;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover:not(:disabled) { background: #e8eaed; }
+    .btn-danger-outline {
+      background: none;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+    .btn-danger-outline:hover:not(:disabled) { background: #fce8e6; }
 
     .option-labels {
       display: flex;
@@ -345,11 +379,112 @@
       color: var(--text-muted);
     }
 
+    /* ─── User Management ─── */
+    .user-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .user-table th {
+      text-align: left;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+    }
+    .user-table td {
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .user-table tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-set { background: #e6f4ea; color: #1e8e3e; }
+    .badge-unset { background: #fce8e6; color: #c5221f; }
+
+    .user-actions { display: flex; gap: 6px; }
+    .user-actions .btn { padding: 6px 12px; font-size: 12px; }
+
+    .add-user-form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      padding-top: 4px;
+      border-top: 1px solid var(--border);
+    }
+    .add-user-form .form-group { flex: 1; min-width: 140px; margin: 0; }
+    .add-user-form label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+    .add-user-form input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .add-user-form input:focus { border-color: var(--primary); }
+    .add-user-form .btn { align-self: flex-end; padding: 9px 18px; }
+
+    /* ─── Modal ─── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      padding: 28px 24px;
+      width: 100%;
+      max-width: 360px;
+      margin: 16px;
+    }
+    .modal h2 { font-size: 17px; font-weight: 700; margin-bottom: 18px; }
+    .modal .form-group { margin-bottom: 14px; }
+    .modal label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
+    .modal input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 12px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .modal input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,115,232,0.15); }
+    .modal .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+    .modal .modal-footer .btn { padding: 9px 20px; }
+
     @media (max-width: 480px) {
       .days-grid { grid-template-columns: 1fr; }
       .btn-row { flex-direction: column; align-items: stretch; }
       .option-labels { margin-left: 0; }
       .btn { justify-content: center; }
+      .add-user-form { flex-direction: column; }
+      .user-actions { flex-wrap: wrap; }
     }
   </style>
 </head>
@@ -360,6 +495,12 @@
   <div>
     <h1>JR監視 コントロールパネル</h1>
     <div class="subtitle">運行障害 LINE通知モニター</div>
+  </div>
+  <div class="header-right">
+    <span class="username-badge">👤 {{ username }}</span>
+    <form method="post" action="/jr-monitor/logout" style="display:inline">
+      <button type="submit" class="btn-header">ログアウト</button>
+    </form>
   </div>
 </header>
 
@@ -404,15 +545,74 @@
     </div>
   </div>
 
+  <!-- ユーザー管理 -->
+  <div class="card">
+    <div class="card-title">👥 ユーザー管理</div>
+    <table class="user-table" id="userTable">
+      <thead>
+        <tr>
+          <th>ユーザー名</th>
+          <th>パスワード</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody">
+        <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:16px">読み込み中...</td></tr>
+      </tbody>
+    </table>
+
+    <div class="add-user-form">
+      <div class="form-group">
+        <label>新しいユーザー名</label>
+        <input type="text" id="newUsername" placeholder="username" autocomplete="off">
+      </div>
+      <div class="form-group">
+        <label>パスワード（省略可）</label>
+        <input type="password" id="newUserPassword" placeholder="空白で未設定">
+      </div>
+      <button class="btn btn-save" onclick="addUser()">＋ 追加</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- パスワード変更モーダル -->
+<div class="modal-overlay" id="pwModal">
+  <div class="modal">
+    <h2>🔑 パスワード変更</h2>
+    <input type="hidden" id="pwModalUsername">
+    <div class="form-group">
+      <label>ユーザー名</label>
+      <input type="text" id="pwModalUsernameDisplay" readonly style="background:#f8f9fa">
+    </div>
+    <div class="form-group">
+      <label>新しいパスワード</label>
+      <input type="password" id="pwModalNewPassword" placeholder="新しいパスワードを入力" autocomplete="new-password">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closePwModal()">キャンセル</button>
+      <button class="btn btn-save" onclick="submitPwChange()">変更</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const DAY_NAMES_JP = ['月', '火', '水', '木', '金', '土', '日'];
   const DAY_LABELS = ['月曜日', '火曜日', '水曜日', '木曜日', '金曜日', '土曜日', '日曜日'];
   let scheduleData = null;
+
+  // ─── 認証エラーハンドリング ───────────────────────────────
+  async function apiFetch(url, options) {
+    const r = await fetch(url, options);
+    if (r.status === 401) {
+      window.location.href = '/jr-monitor/login';
+      return null;
+    }
+    return r;
+  }
 
   // ─── Toast ───────────────────────────────────────────────────
   function showToast(msg, type = '') {
@@ -426,7 +626,8 @@
   // ─── Status ──────────────────────────────────────────────────
   async function refreshStatus() {
     try {
-      const r = await fetch('/jr-monitor/api/status');
+      const r = await apiFetch('/jr-monitor/api/status');
+      if (!r) return;
       const d = await r.json();
       const dot = document.getElementById('statusDot');
       const txt = document.getElementById('statusText');
@@ -459,11 +660,12 @@
     const dryRun = document.getElementById('dryRunCheck').checked;
     document.getElementById('btnStart').disabled = true;
     try {
-      const r = await fetch('/jr-monitor/api/start', {
+      const r = await apiFetch('/jr-monitor/api/start', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({dry_run: dryRun})
       });
+      if (!r) return;
       const d = await r.json();
       if (d.ok) {
         showToast('✅ モニターを起動しました', 'success');
@@ -479,7 +681,8 @@
   async function stopMonitor() {
     document.getElementById('btnStop').disabled = true;
     try {
-      const r = await fetch('/jr-monitor/api/stop', {method: 'POST'});
+      const r = await apiFetch('/jr-monitor/api/stop', {method: 'POST'});
+      if (!r) return;
       const d = await r.json();
       if (d.ok) {
         showToast('🛑 モニターを停止しました');
@@ -599,11 +802,12 @@
   // ─── Save schedule ────────────────────────────────────────────
   async function saveSchedule() {
     try {
-      const r = await fetch('/jr-monitor/api/schedule', {
+      const r = await apiFetch('/jr-monitor/api/schedule', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(scheduleData)
       });
+      if (!r) return;
       const d = await r.json();
       if (d.ok) {
         showToast('✅ スケジュールを保存しました', 'success');
@@ -621,11 +825,12 @@
     if (!scheduleData) return;
     scheduleData.notify_on_start_stop = checked;
     try {
-      const r = await fetch('/jr-monitor/api/schedule', {
+      const r = await apiFetch('/jr-monitor/api/schedule', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(scheduleData)
       });
+      if (!r) return;
       const d = await r.json();
       if (d.ok) {
         showToast(checked ? '🔔 起動・停止通知をONにしました' : '🔕 起動・停止通知をOFFにしました', 'success');
@@ -637,11 +842,147 @@
     }
   }
 
+  // ─── User Management ──────────────────────────────────────────
+  async function loadUsers() {
+    try {
+      const r = await apiFetch('/jr-monitor/api/users');
+      if (!r) return;
+      const d = await r.json();
+      if (!d.ok) return;
+      renderUsers(d.users);
+    } catch(e) {
+      console.error(e);
+    }
+  }
+
+  function renderUsers(users) {
+    const tbody = document.getElementById('userTableBody');
+    if (!users || users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:16px">ユーザーなし</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td><strong>${escapeHtml(u.username)}</strong></td>
+        <td>
+          <span class="badge ${u.password_set ? 'badge-set' : 'badge-unset'}">
+            ${u.password_set ? '設定済み' : '未設定'}
+          </span>
+        </td>
+        <td>
+          <div class="user-actions">
+            <button class="btn btn-secondary" onclick="openPwModal('${escapeHtml(u.username)}')">パスワード変更</button>
+            <button class="btn btn-danger-outline" onclick="deleteUser('${escapeHtml(u.username)}')">削除</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function addUser() {
+    const username = document.getElementById('newUsername').value.trim();
+    const password = document.getElementById('newUserPassword').value;
+    if (!username) {
+      showToast('❌ ユーザー名を入力してください', 'error');
+      return;
+    }
+    try {
+      const r = await apiFetch('/jr-monitor/api/users', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username, password: password || null})
+      });
+      if (!r) return;
+      const d = await r.json();
+      if (d.ok) {
+        showToast('✅ ユーザーを追加しました', 'success');
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newUserPassword').value = '';
+        loadUsers();
+      } else {
+        showToast('❌ ' + (d.error || '追加に失敗しました'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ 通信エラー', 'error');
+    }
+  }
+
+  async function deleteUser(username) {
+    if (!confirm(`ユーザー「${username}」を削除しますか？`)) return;
+    try {
+      const r = await apiFetch(`/jr-monitor/api/users/${encodeURIComponent(username)}`, {method: 'DELETE'});
+      if (!r) return;
+      const d = await r.json();
+      if (d.ok) {
+        showToast('✅ ユーザーを削除しました', 'success');
+        loadUsers();
+      } else {
+        showToast('❌ ' + (d.error || '削除に失敗しました'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ 通信エラー', 'error');
+    }
+  }
+
+  function openPwModal(username) {
+    document.getElementById('pwModalUsername').value = username;
+    document.getElementById('pwModalUsernameDisplay').value = username;
+    document.getElementById('pwModalNewPassword').value = '';
+    document.getElementById('pwModal').classList.add('open');
+    setTimeout(() => document.getElementById('pwModalNewPassword').focus(), 50);
+  }
+
+  function closePwModal() {
+    document.getElementById('pwModal').classList.remove('open');
+  }
+
+  async function submitPwChange() {
+    const username = document.getElementById('pwModalUsername').value;
+    const newPassword = document.getElementById('pwModalNewPassword').value;
+    if (!newPassword) {
+      showToast('❌ 新しいパスワードを入力してください', 'error');
+      return;
+    }
+    try {
+      const r = await apiFetch(`/jr-monitor/api/users/${encodeURIComponent(username)}/password`, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({new_password: newPassword})
+      });
+      if (!r) return;
+      const d = await r.json();
+      if (d.ok) {
+        showToast('✅ パスワードを変更しました', 'success');
+        closePwModal();
+        loadUsers();
+      } else {
+        showToast('❌ ' + (d.error || '変更に失敗しました'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ 通信エラー', 'error');
+    }
+  }
+
+  // モーダル外クリックで閉じる
+  document.getElementById('pwModal').addEventListener('click', function(e) {
+    if (e.target === this) closePwModal();
+  });
+
+  // Escキーでモーダルを閉じる
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePwModal();
+  });
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   // ─── Init ─────────────────────────────────────────────────────
   async function init() {
     await refreshStatus();
     try {
-      const r = await fetch('/jr-monitor/api/schedule');
+      const r = await apiFetch('/jr-monitor/api/schedule');
+      if (!r) return;
       const d = await r.json();
       renderDays(d);
       const notifyCheck = document.getElementById('notifyStartStopCheck');
@@ -649,6 +990,7 @@
     } catch(e) {
       showToast('❌ スケジュールの読み込みに失敗しました', 'error');
     }
+    loadUsers();
     // 30秒ごとにステータスを自動更新
     setInterval(refreshStatus, 30000);
   }

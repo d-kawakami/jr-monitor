@@ -22,6 +22,10 @@ htmlcov/
 *.log
 state.json
 
+# 認証情報
+users.json
+.secret_key
+
 # エディタ
 .vscode/
 .idea/

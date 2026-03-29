@@ -6,22 +6,65 @@ JR監視 コントロールパネル Web アプリケーション
 import json
 import logging
 import os
+import secrets
 import signal
 import subprocess
 import sys
+from functools import wraps
 from pathlib import Path
 
-from flask import Blueprint, Flask, jsonify, render_template, request
+from flask import (
+    Blueprint,
+    Flask,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
+import auth
 import schedule_manager
 
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# シークレットキー: 環境変数 > .secret_key ファイル > 自動生成して保存
+_SECRET_KEY_FILE = Path(__file__).parent / ".secret_key"
+
+
+def _load_secret_key() -> str:
+    env_key = os.environ.get("SECRET_KEY")
+    if env_key:
+        return env_key
+    if _SECRET_KEY_FILE.exists():
+        return _SECRET_KEY_FILE.read_text().strip()
+    key = secrets.token_hex(32)
+    _SECRET_KEY_FILE.write_text(key)
+    return key
+
+
+app.secret_key = _load_secret_key()
+
 bp = Blueprint("jr_monitor", __name__, url_prefix="/jr-monitor")
 
 BASE_DIR = Path(__file__).parent
 PID_FILE = BASE_DIR / "monitor.pid"
+
+
+# ── 認証ヘルパー ──────────────────────────────────────────────
+
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not session.get("username"):
+            if request.path.startswith("/jr-monitor/api/"):
+                return jsonify({"ok": False, "error": "認証が必要です"}), 401
+            return redirect(url_for("jr_monitor.login", next=request.path))
+        return f(*args, **kwargs)
+    return decorated
 
 
 # ── プロセス管理 ──────────────────────────────────────────────
@@ -107,20 +150,51 @@ def stop_process() -> dict:
         return {"ok": False, "error": str(e)}
 
 
-# ── API エンドポイント ────────────────────────────────────────
+# ── 認証エンドポイント ────────────────────────────────────────
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    if session.get("username"):
+        return redirect(url_for("jr_monitor.index"))
+
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        if auth.verify_user(username, password):
+            session["username"] = username
+            next_url = request.args.get("next") or url_for("jr_monitor.index")
+            return redirect(next_url)
+        error = "ユーザー名またはパスワードが正しくありません"
+
+    return render_template("login.html", error=error)
+
+
+@bp.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("jr_monitor.login"))
+
+
+# ── メイン画面 ────────────────────────────────────────────────
 
 @bp.route("/")
+@login_required
 def index():
-    return render_template("index.html")
+    return render_template("index.html", username=session["username"])
 
+
+# ── スケジュール API ──────────────────────────────────────────
 
 @bp.route("/api/schedule", methods=["GET"])
+@login_required
 def api_get_schedule():
     """現在のスケジュール設定を返す"""
     return jsonify(schedule_manager.load_schedule())
 
 
 @bp.route("/api/schedule", methods=["POST"])
+@login_required
 def api_set_schedule():
     """スケジュール設定を更新する"""
     data = request.get_json()
@@ -133,7 +207,10 @@ def api_set_schedule():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+# ── プロセス制御 API ─────────────────────────────────────────
+
 @bp.route("/api/status", methods=["GET"])
+@login_required
 def api_status():
     """モニタープロセスのステータスを返す"""
     status = get_process_status()
@@ -142,6 +219,7 @@ def api_status():
 
 
 @bp.route("/api/start", methods=["POST"])
+@login_required
 def api_start():
     """モニタープロセスを起動する"""
     data = request.get_json() or {}
@@ -151,10 +229,69 @@ def api_start():
 
 
 @bp.route("/api/stop", methods=["POST"])
+@login_required
 def api_stop():
     """モニタープロセスを停止する"""
     result = stop_process()
     return jsonify(result), 200 if result["ok"] else 400
+
+
+# ── ユーザー管理 API ─────────────────────────────────────────
+
+@bp.route("/api/users", methods=["GET"])
+@login_required
+def api_list_users():
+    """ユーザー一覧を返す"""
+    return jsonify({"ok": True, "users": auth.list_users()})
+
+
+@bp.route("/api/users", methods=["POST"])
+@login_required
+def api_add_user():
+    """ユーザーを追加する"""
+    data = request.get_json() or {}
+    username = data.get("username", "").strip()
+    password = data.get("password") or None
+
+    if not username:
+        return jsonify({"ok": False, "error": "ユーザー名を入力してください"}), 400
+
+    if auth.add_user(username, password):
+        logger.info("ユーザーを追加しました: %s (by %s)", username, session["username"])
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "同名のユーザーが既に存在します"}), 400
+
+
+@bp.route("/api/users/<username>", methods=["DELETE"])
+@login_required
+def api_delete_user(username: str):
+    """ユーザーを削除する"""
+    if username == session["username"]:
+        return jsonify({"ok": False, "error": "自分自身は削除できません"}), 400
+
+    if auth.delete_user(username):
+        logger.info("ユーザーを削除しました: %s (by %s)", username, session["username"])
+        return jsonify({"ok": True})
+    return jsonify({"ok": False, "error": "ユーザーが見つかりません"}), 404
+
+
+@bp.route("/api/users/<username>/password", methods=["PUT"])
+@login_required
+def api_set_password(username: str):
+    """パスワードを設定・変更する"""
+    # 自分のパスワード変更、または他ユーザーのパスワードリセット
+    data = request.get_json() or {}
+    new_password = data.get("new_password", "")
+
+    if not new_password:
+        return jsonify({"ok": False, "error": "新しいパスワードを入力してください"}), 400
+
+    if not auth.user_exists(username):
+        return jsonify({"ok": False, "error": "ユーザーが見つかりません"}), 404
+
+    auth.set_password(username, new_password)
+    logger.info("パスワードを変更しました: %s (by %s)", username, session["username"])
+    return jsonify({"ok": True})
 
 
 app.register_blueprint(bp)
