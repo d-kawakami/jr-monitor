@@ -582,15 +582,15 @@
     </div>
     <div class="filter-group">
       <label class="filter-chip" id="chip_運転見合わせ" onclick="toggleFilter('運転見合わせ')">
-        <input type="checkbox" id="filter_運転見合わせ">
+        <input type="checkbox" id="filter_運転見合わせ" onclick="event.stopPropagation()">
         <span class="chip-dot"></span>運転見合わせ
       </label>
       <label class="filter-chip" id="chip_遅延" onclick="toggleFilter('遅延')">
-        <input type="checkbox" id="filter_遅延">
+        <input type="checkbox" id="filter_遅延" onclick="event.stopPropagation()">
         <span class="chip-dot"></span>遅延
       </label>
       <label class="filter-chip" id="chip_運転再開" onclick="toggleFilter('運転再開')">
-        <input type="checkbox" id="filter_運転再開">
+        <input type="checkbox" id="filter_運転再開" onclick="event.stopPropagation()">
         <span class="chip-dot"></span>運転再開（復旧）
       </label>
     </div>
