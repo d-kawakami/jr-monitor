@@ -18,8 +18,15 @@ DAY_NAMES = ["月", "火", "水", "木", "金", "土", "日"]
 # デフォルトスケジュール（平日有効・土日無効）
 DEFAULT_WINDOWS = [["05:30", "08:30"], ["14:30", "20:30"]]
 
+DEFAULT_NOTIFICATION_FILTERS: dict = {
+    "運転見合わせ": True,
+    "遅延": True,
+    "運転再開": True,
+}
+
 DEFAULT_SCHEDULE: dict = {
     "notify_on_start_stop": True,
+    "notification_filters": DEFAULT_NOTIFICATION_FILTERS,
     "days": {
         str(i): {
             "name": DAY_NAMES[i],
@@ -85,6 +92,22 @@ def is_monitoring_time() -> bool:
             return True
 
     return False
+
+
+def get_notification_filters() -> dict:
+    """
+    通知フィルター設定を返す。設定がない場合はデフォルト（すべて有効）を返す
+
+    Returns:
+        {"運転見合わせ": bool, "遅延": bool, "運転再開": bool}
+    """
+    schedule = load_schedule()
+    filters = schedule.get("notification_filters", {})
+    return {
+        "運転見合わせ": filters.get("運転見合わせ", True),
+        "遅延": filters.get("遅延", True),
+        "運転再開": filters.get("運転再開", True),
+    }
 
 
 def current_day_summary() -> str:

@@ -100,6 +100,20 @@ def build_recovery_message(line: str) -> str:
     return f"✅ 【復旧】{line} の運行が正常に戻りました"
 
 
+def _should_notify_disruption(state_text: str, filters: dict) -> bool:
+    """障害・遅延状態の通知要否をフィルター設定に基づいて返す"""
+    if "運転見合わせ" in state_text:
+        return filters.get("運転見合わせ", True)
+    if "遅延" in state_text:
+        return filters.get("遅延", True)
+    return True  # 未分類の状態は常に通知
+
+
+def _should_notify_recovery(filters: dict) -> bool:
+    """復旧通知の要否をフィルター設定に基づいて返す"""
+    return filters.get("運転再開", True)
+
+
 def notify(token: str, user_id: str, text: str, dry_run: bool) -> None:
     """
     LINE通知を送信する（dry-runモードではログ出力のみ）
@@ -168,18 +182,25 @@ def run(dry_run: bool = False, notify_start_stop: bool = True) -> None:
                 logger.warning("運行情報の取得に失敗したため、今回のサイクルをスキップします")
             else:
                 new_or_changed, recovered = state.diff(prev, current, config.TARGET_LINES)
+                filters = schedule_manager.get_notification_filters()
 
                 # 障害・変化通知
                 for info in new_or_changed:
-                    msg = build_disruption_message(info)
                     logger.info("障害検知: %s - %s", info["line"], info["state"])
-                    notify(config.LINE_CHANNEL_TOKEN, config.LINE_USER_ID, msg, dry_run)
+                    if _should_notify_disruption(info["state"], filters):
+                        msg = build_disruption_message(info)
+                        notify(config.LINE_CHANNEL_TOKEN, config.LINE_USER_ID, msg, dry_run)
+                    else:
+                        logger.info("フィルター設定により通知をスキップ: %s - %s", info["line"], info["state"])
 
                 # 復旧通知
                 for line in recovered:
-                    msg = build_recovery_message(line)
                     logger.info("復旧検知: %s", line)
-                    notify(config.LINE_CHANNEL_TOKEN, config.LINE_USER_ID, msg, dry_run)
+                    if _should_notify_recovery(filters):
+                        msg = build_recovery_message(line)
+                        notify(config.LINE_CHANNEL_TOKEN, config.LINE_USER_ID, msg, dry_run)
+                    else:
+                        logger.info("フィルター設定により復旧通知をスキップ: %s", line)
 
                 if not new_or_changed and not recovered:
                     logger.info(

@@ -351,6 +351,44 @@
       padding: 10px 0 6px;
     }
 
+    /* ─── Notification Filters ─── */
+    .filter-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 14px 16px;
+      background: #f8f9fa;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .filter-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: white;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+      color: var(--text-muted);
+    }
+    .filter-chip input[type="checkbox"] { display: none; }
+    .filter-chip.active-suspend { border-color: var(--danger); background: #fce8e6; color: var(--danger); }
+    .filter-chip.active-delay { border-color: var(--warning); background: #fef9e7; color: #9a6400; }
+    .filter-chip.active-resume { border-color: var(--success); background: #e6f4ea; color: #1e8e3e; }
+    .filter-chip .chip-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+    }
+
     /* ─── Save row ─── */
     .save-row {
       display: flex;
@@ -536,6 +574,30 @@
     <div class="section-heading">
       📅 監視スケジュール
       <small>曜日・時間帯を設定</small>
+    </div>
+
+    <div class="section-heading" style="font-size:14px; margin-bottom:8px;">
+      🔔 通知する状態
+      <small>ONにした状態のみLINE通知を送信</small>
+    </div>
+    <div class="filter-group">
+      <label class="filter-chip" id="chip_運転見合わせ" onclick="toggleFilter('運転見合わせ')">
+        <input type="checkbox" id="filter_運転見合わせ">
+        <span class="chip-dot"></span>運転見合わせ
+      </label>
+      <label class="filter-chip" id="chip_遅延" onclick="toggleFilter('遅延')">
+        <input type="checkbox" id="filter_遅延">
+        <span class="chip-dot"></span>遅延
+      </label>
+      <label class="filter-chip" id="chip_運転再開" onclick="toggleFilter('運転再開')">
+        <input type="checkbox" id="filter_運転再開">
+        <span class="chip-dot"></span>運転再開（復旧）
+      </label>
+    </div>
+
+    <div class="section-heading" style="font-size:14px; margin-bottom:8px;">
+      📆 曜日・時間帯
+      <small></small>
     </div>
     <div class="days-grid" id="daysGrid">
       <!-- JS で生成 -->
@@ -821,6 +883,53 @@
     }
   }
 
+  // ─── Notification Filters ────────────────────────────────────
+  const FILTER_ACTIVE_CLASSES = {
+    '運転見合わせ': 'active-suspend',
+    '遅延': 'active-delay',
+    '運転再開': 'active-resume',
+  };
+
+  function renderFilters(filters) {
+    for (const [key, activeClass] of Object.entries(FILTER_ACTIVE_CLASSES)) {
+      const enabled = filters ? (filters[key] !== false) : true;
+      const chip = document.getElementById('chip_' + key);
+      if (chip) {
+        chip.classList.toggle(activeClass, enabled);
+      }
+      if (!scheduleData.notification_filters) {
+        scheduleData.notification_filters = {};
+      }
+      scheduleData.notification_filters[key] = enabled;
+    }
+  }
+
+  async function toggleFilter(key) {
+    if (!scheduleData) return;
+    if (!scheduleData.notification_filters) scheduleData.notification_filters = {};
+    const current = scheduleData.notification_filters[key] !== false;
+    scheduleData.notification_filters[key] = !current;
+    renderFilters(scheduleData.notification_filters);
+    try {
+      const r = await apiFetch('/jr-monitor/api/schedule', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(scheduleData)
+      });
+      if (!r) return;
+      const d = await r.json();
+      const label = key === '運転再開' ? '運転再開（復旧）' : key;
+      if (d.ok) {
+        const on = scheduleData.notification_filters[key];
+        showToast((on ? '🔔 ' : '🔕 ') + label + '通知を' + (on ? 'ONにしました' : 'OFFにしました'), 'success');
+      } else {
+        showToast('❌ ' + (d.error || '保存に失敗しました'), 'error');
+      }
+    } catch(e) {
+      showToast('❌ 通信エラー', 'error');
+    }
+  }
+
   // ─── Notify on start/stop ─────────────────────────────────────
   async function saveNotifyStartStop(checked) {
     if (!scheduleData) return;
@@ -988,6 +1097,7 @@
       renderDays(d);
       const notifyCheck = document.getElementById('notifyStartStopCheck');
       notifyCheck.checked = d.notify_on_start_stop !== false;
+      renderFilters(d.notification_filters);
     } catch(e) {
       showToast('❌ スケジュールの読み込みに失敗しました', 'error');
     }
