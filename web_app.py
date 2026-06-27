@@ -23,6 +23,7 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 import auth
 import schedule_manager
@@ -30,6 +31,7 @@ import schedule_manager
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_port=1, x_prefix=1)
 
 # シークレットキー: 環境変数 > .secret_key ファイル > 自動生成して保存
 _SECRET_KEY_FILE = Path(__file__).parent / ".secret_key"
