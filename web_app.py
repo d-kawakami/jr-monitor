@@ -303,4 +303,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     port = int(os.environ.get("WEB_PORT", 5000))
     print(f"JR監視コントロールパネルを起動中... http://localhost:{port}/jr-monitor")
-    app.run(host="0.0.0.0", port=port, debug=False)
+    app.run(host="127.0.0.1", port=port, debug=False)
