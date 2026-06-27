@@ -134,7 +134,7 @@ Start the control panel with:
 python web_app.py
 ```
 
-Then open `http://localhost:5000/jr-monitor` in a browser.
+Then open `http://localhost:5120/jr-monitor` in a browser.
 
 ### Authentication
 
@@ -164,8 +164,8 @@ User data is stored in `users.json` (passwords are bcrypt-hashed). You can manag
 You can change the port with the `WEB_PORT` environment variable:
 
 ```bash
-WEB_PORT=8080 python web_app.py
-# Access at http://localhost:8080/jr-monitor
+WEB_PORT=5120 python web_app.py
+# Access at http://localhost:5120/jr-monitor
 ```
 
 ---
